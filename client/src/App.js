@@ -1,58 +1,64 @@
-import React, { Component } from 'react';
-
+import React, { useState } from 'react';
 import axios from 'axios';
 import FormData from 'form-data';
 
+import { STORJ_IPFS_API_URL } from './constants';
+import FilesTable from './components/filesTable'
 import './App.css';
 
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-	this.state = {
-		buffer: null
+function App() {
+	const [selectedFile, setSelectedFile] = useState(null);
+	const [uploadedFiles, setUploadedFiles] = useState([{
+		"cid": "QmQxN59Uc1Jv31PfpBh4pW5dzX63oBFjZYR8KrxgnqUx5b",
+		"name": "ipfs.jpeg",
+		"size": "52528",
+	}]);
+
+	const handleFileChange = (event) => {
+		setSelectedFile(event.target.files[0]);
 	};
-  }
 
-  handleFileUpload = async (event) => {
-    event.preventDefault();
+	const handleSubmit = async (event) => {
+		event.preventDefault();
 
-    const url = `https://demo.storj-ipfs.com/api/v0/add`;
+		let data = new FormData();
+		data.append('file', selectedFile);
 
-    let data = new FormData();
-    data.append('file', event.target.files[0]);
+		try {
+			const response = await axios.post(STORJ_IPFS_API_URL, data, {
+				headers: {
+					'Content-Type': `multipart/form-data; boundary= ${data._boundary}`,
+				},
+				maxContentLength: Infinity,
+				maxBodyLength: Infinity,
+			});
 
-	try {
-      const response = await axios.post(url, data, {
-        headers: {
-          'Content-Type': `multipart/form-data; boundary= ${data._boundary}`,
-        },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-      });
+			console.log(response);
+			setUploadedFiles([...uploadedFiles, {
+				"cid": response.data.Hash,
+				"name": response.data.Name,
+				"size": response.data.Size,
+			}]);
+		} catch (error) {
+			console.error(error);
+		}
+	}
 
-      console.log(response);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  render() {
-    return (
-      <div className="App">
-        <header className="App-header">
-          {/* <img src={logo} className="App-logo" alt="logo" /> */}
-          <p>
-            Upload file
-          </p>
-          <form onChange={this.handleFileUpload}>
-            <input type="file"/>
-            <input type="submit"/>
-          </form>
-        </header>
-      </div>
-    );
-  }
+	return (
+		<div className="App">
+		<header className="App-header">
+			<FilesTable files={uploadedFiles}/>
+			<p>
+			Upload file
+			</p>
+			<form onSubmit={handleSubmit}>
+				<input type="file" onChange={handleFileChange}/>
+				<input type="submit"/>
+			</form>
+		</header>
+		</div>
+	);
 }
 
 export default App;

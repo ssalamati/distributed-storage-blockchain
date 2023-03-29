@@ -3,7 +3,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 
 import { STORJ_IPFS_API_URL } from './constants';
-import FilesTable from './components/filesTable'
+import FilesTable from './components/FilesTable/FilesTable'
 import './App.css';
 
 
@@ -49,9 +49,9 @@ function App() {
 		<div className="App">
 		<header className="App-header">
 			<FilesTable files={uploadedFiles}/>
-			<p>
-			Upload file
-			</p>
+			<h5>
+			Upload a file:
+			</h5>
 			<form onSubmit={handleSubmit}>
 				<input type="file" onChange={handleFileChange}/>
 				<input type="submit"/>

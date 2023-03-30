@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import FormData from 'form-data';
+import Web3 from 'web3';
 
-import { STORJ_IPFS_API_URL } from './constants';
+import { NETWORK_ID, NETWORK_URL, STORJ_IPFS_API_URL, STORJ_IPFS_GATEWAY_URL } from './constants';
 import FilesTable from './components/FilesTable/FilesTable'
+import StorageContract from './artifacts/contracts/Storage.json'
 import './App.css';
 
 
 function App() {
 	const [selectedFile, setSelectedFile] = useState(null);
-	const [uploadedFiles, setUploadedFiles] = useState([{
-		"cid": "QmQxN59Uc1Jv31PfpBh4pW5dzX63oBFjZYR8KrxgnqUx5b",
-		"name": "ipfs.jpeg",
-		"size": "52528",
-	}]);
+	const [uploadedFiles, setUploadedFiles] = useState([]);
+	const [contract, setContract] = useState([]);
+	const [account, setAccount] = useState([]);
+
+	useEffect(() => {
+		const init = async () => {
+		  const web3 = new Web3(NETWORK_URL);
+		  const contract = new web3.eth.Contract(StorageContract.abi, StorageContract.networks[NETWORK_ID].address);
+		  setContract(contract);
+
+		  const accounts = await web3.eth.getAccounts();
+		  setAccount(accounts[0]);
+
+		  const uploadedFiles = await contract.methods.getFiles().call();
+		  setUploadedFiles(uploadedFiles);
+		}
+		init();
+	  }, []);
 
 	const handleFileChange = (event) => {
 		setSelectedFile(event.target.files[0]);
@@ -34,12 +49,9 @@ function App() {
 				maxBodyLength: Infinity,
 			});
 
-			console.log(response);
-			setUploadedFiles([...uploadedFiles, {
-				"cid": response.data.Hash,
-				"name": response.data.Name,
-				"size": response.data.Size,
-			}]);
+			await contract.methods.addFile(response.data.Hash).send({from: account, gas: '1000000'});
+
+			window.location.reload(false);
 		} catch (error) {
 			console.error(error);
 		}
@@ -48,9 +60,9 @@ function App() {
 	return (
 		<div className="App">
 		<header className="App-header">
-			<FilesTable files={uploadedFiles}/>
+			<FilesTable files={uploadedFiles.map(fileHash => ({url: `${STORJ_IPFS_GATEWAY_URL}${fileHash}`, name: fileHash, size: ""}))}/>
 			<h5>
-			Upload a file:
+			Upload a file3
 			</h5>
 			<form onSubmit={handleSubmit}>
 				<input type="file" onChange={handleFileChange}/>
